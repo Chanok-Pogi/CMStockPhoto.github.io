@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Stock Photos</title>
+  </head>
+  <body>
+    <h1>Stock Photos</h1>
+    
+    <!-- Image grid -->
+    <div id="image-grid"></div>
+    
+    <!-- Upload form -->
+    <form id="upload-form">
+      <input type="file" id="file-input">
+      <button type="submit">Upload</button>
+    </form>
+    
+    <script>
+      // Initialize images array with existing images from the database
+      let images = [];
+      
+      // Create a function to render the images in the grid
+      function renderImages(images) {
+        const imageGrid = document.getElementById('image-grid');
+        imageGrid.innerHTML = '';
+        images.forEach((image, index) => {
+          const imageElement = document.createElement('div');
+          imageElement.classList.add('image');
+          
+          const img = document.createElement('img');
+          img.src = image.src;
+          imageElement.appendChild(img);
+          
+          const keywords = document.createElement('p');
+          keywords.textContent = `Keywords: ${image.keywords.join(', ')}`;
+          imageElement.appendChild(keywords);
+          
+          const deleteButton = document.createElement('button');
+          deleteButton.textContent = 'Delete';
+          deleteButton.addEventListener('click', () => {
+            deleteImage(index);
+          });
+          imageElement.appendChild(deleteButton);
+          
+          const downloadButton = document.createElement('button');
+          downloadButton.textContent = 'Download';
+          downloadButton.addEventListener('click', () => {
+            downloadImage(image.src);
+          });
+          imageElement.appendChild(downloadButton);
+          
+          imageGrid.appendChild(imageElement);
+        });
+      }
+      
+      // Initialize the image grid with images from the database
+      function loadImages() {
+        fetch('get_images.php')
+          .then(response => response.json())
+          .then(data => {
+            images = data;
+            renderImages(images);
+          });
+      }
+      
+      // Initialize the image grid
+      loadImages();
+      
+      // Add an event listener to the upload form
+      const uploadForm = document.getElementById('upload-form');
+      const fileInput = document.getElementById('file-input');
+      uploadForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const file = fileInput.files[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('image', file);
+          fetch('upload_image.php', {
+            method: 'POST',
+            body: formData
+          })
+            .then(response => response.json())
+            .then(data => {
+              const newImage = { src: data.url, keywords: [] };
+              images.push(newImage);
+              renderImages(images);
+              fileInput.value = '';
+            });
+        }
+      });
+      
+      // Create a function to delete an image from the database
+      function deleteImage(index) {
+        const image = images[index];
+        fetch('delete_image.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ src: image.src })
+        })
+          .then(() => {
+            images.splice(index, 1);
+            renderImages(images);
+          });
+      }
+      
+      // Create a function to download an image
+      function downloadImage(src) {
+        const link = document.createElement('a');
+        link.download = '';
+        link.href = src;
+        link.click();
+      }
+    </script>
+  </body>
+</html>
